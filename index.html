@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <!-- inport a-frame -->
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <!-- inport extras -->
+    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
+    <!-- inport ammo-system -->
+    <script src="//cdn.8thwall.com/web/aframe/ammo.wasm.js"></script>
+    <!-- inport physics-system -->
+    <script src="https://cdn.jsdelivr.net/npm/aframe-physics-system@4.0.2/dist/aframe-physics-system.min.js"></script>  
+  </head>
+  
+    <!-- controller -->
+    <script>
+      AFRAME.registerComponent('input-listener', {
+        init:
+            function () {
+                //button reset
+                this.el.grip = false;
+                this.el.trigger = false;
+                this.el.abutton = false;
+                this.el.bbutton = false;
+                this.el.xbutton=false;
+                this.ybutton = false;
+                //let rot=0:
+                //let origin=1;
+                             
+                //left_stick on
+                //document.getElementById('ctlL').addEventListener('axismove', function (e) {
+                 
+                //});  
+              
+                //right_stick on
+                //document.getElementById('ctlR').addEventListener('axismove', function (e) {                 
+                  //var r=document.getElementById('cameraRig').getAttribute('rotation');
+                  //document.getElementById('cameraRig').setAttribute('rotation',{x: r.x,y: r.y-0.2*e.detail.axis[2],z: r.z});
+                //});
+              
+                //press_grip
+                this.el.addEventListener('gripdown', function (e) {
+                  this.grip = true;
+                  document.getElementById("ctlL").setAttribute("raycaster","lineColor","#0000ff");  //blue laser
+                  document.getElementById("ctlR").setAttribute("raycaster","lineColor","#0000ff");　//blue laser
+                });
+
+                //release_grip
+                this.el.addEventListener('gripup', function (e) {
+                  this.grip = false;
+                  document.getElementById("ctlL").setAttribute("raycaster","lineColor","#ffffff");  //white laser
+                  document.getElementById("ctlR").setAttribute("raycaster","lineColor","#ffffff");　//white laser
+                });
+              
+                //press_trigger
+                this.el.addEventListener('triggerdown', function (e) {
+                  this.trigger = true;
+                  document.getElementById("ctlL").setAttribute("raycaster","lineColor","#ffaa00");  //orange laser
+                  document.getElementById("ctlR").setAttribute("raycaster","lineColor","#ffaa00");  //orange laser
+                  origin=0;   
+                });
+
+                //release_trigger
+                this.el.addEventListener('triggerup', function (e) {
+                  this.trigger = false;
+                  document.getElementById("ctlL").setAttribute("raycaster","lineColor","#ffffff");  //white laser
+                  document.getElementById("ctlR").setAttribute("raycaster","lineColor","#ffffff");  //white laser
+                  origin=1;
+                });
+              
+                //press_a
+                this.el.addEventListener('abuttondown', function (e) {
+                  this.abutton = true;
+                  document.getElementById("ctlR").setAttribute("raycaster","lineColor","#ff0000");  //red laser
+                  rot=1;  //ccw
+                  origin=1;
+                });
+
+                //release_a
+                this.el.addEventListener('abuttonup', function (e) {
+                  this.abutton = false;
+                  document.getElementById("ctlR").setAttribute("raycaster","lineColor","#ffffff");  //white laser
+                  rot=0;  //rotation reset
+                });
+              
+                //press_b
+                this.el.addEventListener('bbuttondown', function (e) {
+                  this.bbutton = true;
+                });
+
+                //release_b
+                this.el.addEventListener('bbuttonup', function (e) {
+                  this.bbutton = false;
+                });
+              
+                //press_x
+                this.el.addEventListener('xbuttondown', function (e) {
+                  this.xbbutton = true;
+                  document.getElementById("ctlL").setAttribute("raycaster","lineColor","#ff0000");  //red laser
+                  rot=-1;  //cw
+                  origin=1;
+                });
+
+                //release_x
+                this.el.addEventListener('xbuttonup', function (e) {
+                  this.bbutton = false;
+                  document.getElementById("ctlL").setAttribute("raycaster","lineColor","#ffffff");  //white laser
+                  rot=0;  //rotation reset
+                });
+              
+                //press_y
+                this.el.addEventListener('ybuttondown', function (e) {
+                    this.ybutton = true;
+                });
+
+                //release_y
+                this.el.addEventListener('ybuttonup', function (e) {
+                  this.ybutton = false;
+                });
+
+                //レイキャスターが何かしらのオブジェクトにぶつかった時
+                this.el.addEventListener('raycaster-intersection', function (e) {
+                  this.selectedObj = e.detail.els[0]; //交差したオブジェクトのうち0番目を覚えておく(本当はもうちょっと上手にやるべき)
+                });
+
+                //レイキャスターとオブジェクトとの接触完了
+                this.el.addEventListener('raycaster-intersection-cleared', function (e) {
+                  this.selectedObj = null; //レイキャスターと接触しているオブジェクトの情報をクリア
+                });
+              
+                //オブジェクトがレイキャスターにあてられたとき
+                this.el.addEventListener('raycaster-intersected', function (e) {
+                  e.target.setAttribute("ammo-body","type: static");  //物理演算有効化
+                  y = e.target.getAttribute("rotation").y;  //対象オブジェクトy軸回転角度取得
+                  e.target.setAttribute("rotation",{ y: origin*(y+15*rot)});  //対象オブジェクト回転
+                });
+
+                //オブジェクトがレイキャスターからはずれたとき
+                this.el.addEventListener('raycaster-intersected-cleared', function (e) {
+                  e.target.setAttribute("ammo-body","type: dynamic");  //物理演算無効化
+                });
+              
+            },
+
+        //毎フレーム呼ばれる
+        tick:
+            function () {
+                if (!this.el.selectedObj) { return; }
+                if (!this.el.grip) { return; }
+                //レイキャスターの向きを取得 (this.elはコントローラを示す)
+                var ray = this.el.getAttribute("raycaster").direction;
+                //レイキャスターの先端の位置を1.2m手前とし、そのワールド座標を計算 
+                var p = new THREE.Vector3(ray.x, ray.y, ray.z);
+                p.normalize();
+                p.multiplyScalar(1.2);
+                this.el.object3D.localToWorld(p);
+                //レイキャスターの先端に、選択中のオブジェクトを追従させる。
+                this.el.selectedObj.object3D.position.set(p.x, p.y, p.z);
+            }
+    });
+  </script>
+  
+  <body>
+    <a-scene vr-mode-ui="enabled:true" physics="driver: ammo; debug: false; debugDrawMode: 1;">
+      
+      <!-- asset items -->
+      <a-assets>
+        <img id="wall" src="/tex/wall_cieling.jpg">
+        <img id="floor" src="/tex/floor.jpg">
+      </a-assets>
+     
+      
+      <!-- collidable object -->
+      <a-box scale=".5 .5 .5" color="red" position="-17.5 1 10" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="orange" position="-16.5 1 10" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="yellow" position="-15.5 1 9" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="green" position="-14.5 1 9" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-cone height=".5" radius-bottom=".25" radius-top="0" color="blue" position="-17.5 1 9" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cone;" input-listener></a-cone>
+      <a-cone height=".5" radius-bottom=".25" radius-top="0" color="indigo" position="-16.5 1 9" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cone;" input-listener></a-cone>
+      <a-sphere radius=".25" color="purple" position="-15.5 1 10" class="collidable" ammo-body="type: dynamic" ammo-shape="type: sphere;" input-listener></a-sphere>
+      <a-sphere radius=".25" color="black" position="-614.5 1 10" class="collidable" ammo-body="type: dynamic" ammo-shape="type: sphere;" input-listener></a-sphere>
+      <a-box scale=".5 .5 .5" color="blue" position="-17.5 1 12" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="indigo" position="-16.5 1 12" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="purple" position="-15.5 1 12" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="black" position="-14.5 1 12" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-cylinder height=".5" radius=".25" color="red" position="-17.5 1 13" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-cylinder height=".5" radius=".25" color="orange" position="-16.5 1 13" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-cylinder height=".5" radius=".25" color="yellow" position="-15.5 1 13" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-cylinder height=".5" radius=".25" color="green" position="-14.5 1 13" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-box scale=".5 .25 1.5" color="pink" position="-18.5 1 9.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .25 1.5" color="white" position="-13.5 1 9.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .25 1.5" color="pink" position="-18.5 1 12.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .25 1.5" color="white" position="-13.5 1 12.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      
+      <a-box scale=".5 .5 .5" color="red" position="-9.5 1 10" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="orange" position="-8.5 1 10" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="yellow" position="-7.5 1 9" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="green" position="-6.5 1 9" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-cone height=".5" radius-bottom=".25" radius-top="0" color="blue" position="-9.5 1 9" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cone;" input-listener></a-cone>
+      <a-cone height=".5" radius-bottom=".25" radius-top="0" color="indigo" position="-8.5 1 9" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cone;" input-listener></a-cone>
+      <a-sphere radius=".25" color="purple" position="-7.5 1 10" class="collidable" ammo-body="type: dynamic" ammo-shape="type: sphere;" input-listener></a-sphere>
+      <a-sphere radius=".25" color="black" position="-6.5 1 10" class="collidable" ammo-body="type: dynamic" ammo-shape="type: sphere;" input-listener></a-sphere>
+      <a-box scale=".5 .5 .5" color="blue" position="-9.5 1 12" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="indigo" position="-8.5 1 12" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="purple" position="-7.5 1 12" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="black" position="-6.5 1 12" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-cylinder height=".5" radius=".25" color="red" position="-9.5 1 13" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-cylinder height=".5" radius=".25" color="orange" position="-8.5 1 13" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-cylinder height=".5" radius=".25" color="yellow" position="-7.5 1 13" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-cylinder height=".5" radius=".25" color="green" position="-6.5 1 13" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-box scale=".5 .25 1.5" color="pink" position="-10.5 1 9.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .25 1.5" color="white" position="-5.5 1 9.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .25 1.5" color="pink" position="-10.5 1 12.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .25 1.5" color="white" position="-5.5 1 12.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      
+      <a-box scale=".5 .5 .5" color="red" position="-1.5 1 10" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="orange" position="-.5 1 10" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="yellow" position=".5 1 9" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="green" position="1.5 1 9" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-cone height=".5" radius-bottom=".25" radius-top="0" color="blue" position="-1.5 1 9" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cone;" input-listener></a-cone>
+      <a-cone height=".5" radius-bottom=".25" radius-top="0" color="indigo" position="-.5 1 9" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cone;" input-listener></a-cone>
+      <a-sphere radius=".25" color="purple" position=".5 1 10" class="collidable" ammo-body="type: dynamic" ammo-shape="type: sphere;" input-listener></a-sphere>
+      <a-sphere radius=".25" color="black" position="1.5 1 10" class="collidable" ammo-body="type: dynamic" ammo-shape="type: sphere;" input-listener></a-sphere>
+      <a-box scale=".5 .5 .5" color="blue" position="-1.5 1 12" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="indigo" position="-.5 1 12" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="purple" position=".5 1 12" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="black" position="1.5 1 12" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-cylinder height=".5" radius=".25" color="red" position="-1.5 1 13" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-cylinder height=".5" radius=".25" color="orange" position="-.5 1 13" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-cylinder height=".5" radius=".25" color="yellow" position=".5 1 13" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-cylinder height=".5" radius=".25" color="green" position="1.5 1 13" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-box scale=".5 .25 1.5" color="pink" position="-2.5 1 9.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .25 1.5" color="white" position="2.5 1 9.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .25 1.5" color="pink" position="-2.5 1 12.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .25 1.5" color="white" position="2.5 1 12.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+
+      <a-box scale=".5 .5 .5" color="red" position="6.5 1 10" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="orange" position="7.5 1 10" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="yellow" position="8.5 1 9" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="green" position="9.5 1 9" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-cone height=".5" radius-bottom=".25" radius-top="0" color="blue" position="6.5 1 9" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cone;" input-listener></a-cone>
+      <a-cone height=".5" radius-bottom=".25" radius-top="0" color="indigo" position="7.5 1 9" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cone;" input-listener></a-cone>
+      <a-sphere radius=".25" color="purple" position="8.5 1 10" class="collidable" ammo-body="type: dynamic" ammo-shape="type: sphere;" input-listener></a-sphere>
+      <a-sphere radius=".25" color="black" position="9.5 1 10" class="collidable" ammo-body="type: dynamic" ammo-shape="type: sphere;" input-listener></a-sphere>
+      <a-box scale=".5 .5 .5" color="blue" position="6.5 1 12" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="indigo" position="7.5 1 12" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="purple" position="8.5 1 12" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="black" position="9.5 1 12" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-cylinder height=".5" radius=".25" color="red" position="6.5 1 13" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-cylinder height=".5" radius=".25" color="orange" position="7.5 1 13" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-cylinder height=".5" radius=".25" color="yellow" position="8.5 1 13" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-cylinder height=".5" radius=".25" color="green" position="9.5 1 13" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-box scale=".5 .25 1.5" color="pink" position="5.5 1 9.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .25 1.5" color="white" position="10.5 1 9.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .25 1.5" color="pink" position="5.5 1 12.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .25 1.5" color="white" position="10.5 1 12.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      
+      <a-box scale=".5 .5 .5" color="red" position="14.5 1 10" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="orange" position="15.5 1 10" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="yellow" position="16.5 1 9" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="green" position="17.5 1 9" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-cone height=".5" radius-bottom=".25" radius-top="0" color="blue" position="14.5 1 9" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cone;" input-listener></a-cone>
+      <a-cone height=".5" radius-bottom=".25" radius-top="0" color="indigo" position="15.5 1 9" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cone;" input-listener></a-cone>
+      <a-sphere radius=".25" color="purple" position="16.5 1 10" class="collidable" ammo-body="type: dynamic" ammo-shape="type: sphere;" input-listener></a-sphere>
+      <a-sphere radius=".25" color="black" position="17.5 1 10" class="collidable" ammo-body="type: dynamic" ammo-shape="type: sphere;" input-listener></a-sphere>
+      <a-box scale=".5 .5 .5" color="blue" position="14.5 1 12" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="indigo" position="15.5 1 12" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="purple" position="16.5 1 12" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="black" position="17.5 1 12" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-cylinder height=".5" radius=".25" color="red" position="14.5 1 13" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-cylinder height=".5" radius=".25" color="orange" position="15.5 1 13" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-cylinder height=".5" radius=".25" color="yellow" position="16.5 1 13" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-cylinder height=".5" radius=".25" color="green" position="17.5 1 13" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-box scale=".5 .25 1.5" color="pink" position="13.5 1 9.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .25 1.5" color="white" position="18.5 1 9.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .25 1.5" color="pink" position="13.5 1 12.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .25 1.5" color="white" position="18.5 1 12.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      
+      
+      
+      <a-box scale=".5 .5 .5" color="red" position="-17.5 1 0" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="orange" position="-16.5 1 0" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="yellow" position="-15.5 1 -1" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="green" position="-14.5 1 -1" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-cone height=".5" radius-bottom=".25" radius-top="0" color="blue" position="-17.5 1 -1" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cone;" input-listener></a-cone>
+      <a-cone height=".5" radius-bottom=".25" radius-top="0" color="indigo" position="-16.5 1 -1" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cone;" input-listener></a-cone>
+      <a-sphere radius=".25" color="purple" position="-15.5 1 0" class="collidable" ammo-body="type: dynamic" ammo-shape="type: sphere;" input-listener></a-sphere>
+      <a-sphere radius=".25" color="black" position="-614.5 1 0" class="collidable" ammo-body="type: dynamic" ammo-shape="type: sphere;" input-listener></a-sphere>
+      <a-box scale=".5 .5 .5" color="blue" position="-17.5 1 2" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="indigo" position="-16.5 1 2" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="purple" position="-15.5 1 2" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="black" position="-14.5 1 2" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-cylinder height=".5" radius=".25" color="red" position="-17.5 1 3" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-cylinder height=".5" radius=".25" color="orange" position="-16.5 1 3" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-cylinder height=".5" radius=".25" color="yellow" position="-15.5 1 3" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-cylinder height=".5" radius=".25" color="green" position="-14.5 1 3" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-box scale=".5 .25 1.5" color="pink" position="-18.5 1 -.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .25 1.5" color="white" position="-13.5 1 -.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .25 1.5" color="pink" position="-18.5 1 2.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .25 1.5" color="white" position="-13.5 1 2.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      
+      <a-box scale=".5 .5 .5" color="red" position="-9.5 1 0" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="orange" position="-8.5 1 0" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="yellow" position="-7.5 1 -1" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="green" position="-6.5 1 -1" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-cone height=".5" radius-bottom=".25" radius-top="0" color="blue" position="-9.5 1 -1" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cone;" input-listener></a-cone>
+      <a-cone height=".5" radius-bottom=".25" radius-top="0" color="indigo" position="-8.5 1 -1" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cone;" input-listener></a-cone>
+      <a-sphere radius=".25" color="purple" position="-7.5 1 0" class="collidable" ammo-body="type: dynamic" ammo-shape="type: sphere;" input-listener></a-sphere>
+      <a-sphere radius=".25" color="black" position="-6.5 1 0" class="collidable" ammo-body="type: dynamic" ammo-shape="type: sphere;" input-listener></a-sphere>
+      <a-box scale=".5 .5 .5" color="blue" position="-9.5 1 2" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="indigo" position="-8.5 1 2" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="purple" position="-7.5 1 2" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="black" position="-6.5 1 2" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-cylinder height=".5" radius=".25" color="red" position="-9.5 1 3" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-cylinder height=".5" radius=".25" color="orange" position="-8.5 1 3" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-cylinder height=".5" radius=".25" color="yellow" position="-7.5 1 3" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-cylinder height=".5" radius=".25" color="green" position="-6.5 1 3" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-box scale=".5 .25 1.5" color="pink" position="-10.5 1 -.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .25 1.5" color="white" position="-5.5 1 -.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .25 1.5" color="pink" position="-10.5 1 2.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .25 1.5" color="white" position="-5.5 1 2.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      
+      <a-box scale=".5 .5 .5" color="red" position="-1.5 1 0" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="orange" position="-.5 1 0" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="yellow" position=".5 1 -1" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="green" position="1.5 1 -1" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-cone height=".5" radius-bottom=".25" radius-top="0" color="blue" position="-1.5 1 -1" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cone;" input-listener></a-cone>
+      <a-cone height=".5" radius-bottom=".25" radius-top="0" color="indigo" position="-.5 1 -1" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cone;" input-listener></a-cone>
+      <a-sphere radius=".25" color="purple" position=".5 1 0" class="collidable" ammo-body="type: dynamic" ammo-shape="type: sphere;" input-listener></a-sphere>
+      <a-sphere radius=".25" color="black" position="1.5 1 0" class="collidable" ammo-body="type: dynamic" ammo-shape="type: sphere;" input-listener></a-sphere>
+      <a-box scale=".5 .5 .5" color="blue" position="-1.5 1 2" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="indigo" position="-.5 1 2" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="purple" position=".5 1 2" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="black" position="1.5 1 2" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-cylinder height=".5" radius=".25" color="red" position="-1.5 1 3" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-cylinder height=".5" radius=".25" color="orange" position="-.5 1 3" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-cylinder height=".5" radius=".25" color="yellow" position=".5 1 3" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-cylinder height=".5" radius=".25" color="green" position="1.5 1 3" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-box scale=".5 .25 1.5" color="pink" position="-2.5 1 -.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .25 1.5" color="white" position="2.5 1 -.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .25 1.5" color="pink" position="-2.5 1 2.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .25 1.5" color="white" position="2.5 1 2.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+
+      <a-box scale=".5 .5 .5" color="red" position="6.5 1 0" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="orange" position="7.5 1 0" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="yellow" position="8.5 1 -1" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="green" position="9.5 1 -1" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-cone height=".5" radius-bottom=".25" radius-top="0" color="blue" position="6.5 1 -1" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cone;" input-listener></a-cone>
+      <a-cone height=".5" radius-bottom=".25" radius-top="0" color="indigo" position="7.5 1 -1" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cone;" input-listener></a-cone>
+      <a-sphere radius=".25" color="purple" position="8.5 1 0" class="collidable" ammo-body="type: dynamic" ammo-shape="type: sphere;" input-listener></a-sphere>
+      <a-sphere radius=".25" color="black" position="9.5 1 0" class="collidable" ammo-body="type: dynamic" ammo-shape="type: sphere;" input-listener></a-sphere>
+      <a-box scale=".5 .5 .5" color="blue" position="6.5 1 2" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="indigo" position="7.5 1 2" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="purple" position="8.5 1 2" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="black" position="9.5 1 2" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-cylinder height=".5" radius=".25" color="red" position="6.5 1 3" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-cylinder height=".5" radius=".25" color="orange" position="7.5 1 3" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-cylinder height=".5" radius=".25" color="yellow" position="8.5 1 3" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-cylinder height=".5" radius=".25" color="green" position="9.5 1 3" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-box scale=".5 .25 1.5" color="pink" position="5.5 1 -.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .25 1.5" color="white" position="10.5 1 -.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .25 1.5" color="pink" position="5.5 1 2.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .25 1.5" color="white" position="10.5 1 2.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      
+      <a-box scale=".5 .5 .5" color="red" position="14.5 1 0" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="orange" position="15.5 1 0" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="yellow" position="16.5 1 -1" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="green" position="17.5 1 -1" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-cone height=".5" radius-bottom=".25" radius-top="0" color="blue" position="14.5 1 -1" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cone;" input-listener></a-cone>
+      <a-cone height=".5" radius-bottom=".25" radius-top="0" color="indigo" position="15.5 1 -1" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cone;" input-listener></a-cone>
+      <a-sphere radius=".25" color="purple" position="16.5 1 0" class="collidable" ammo-body="type: dynamic" ammo-shape="type: sphere;" input-listener></a-sphere>
+      <a-sphere radius=".25" color="black" position="17.5 1 0" class="collidable" ammo-body="type: dynamic" ammo-shape="type: sphere;" input-listener></a-sphere>
+      <a-box scale=".5 .5 .5" color="blue" position="14.5 1 2" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="indigo" position="15.5 1 2" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="purple" position="16.5 1 2" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="black" position="17.5 1 2" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-cylinder height=".5" radius=".25" color="red" position="14.5 1 3" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-cylinder height=".5" radius=".25" color="orange" position="15.5 1 3" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-cylinder height=".5" radius=".25" color="yellow" position="16.5 1 3" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-cylinder height=".5" radius=".25" color="green" position="17.5 1 3" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-box scale=".5 .25 1.5" color="pink" position="13.5 1 -.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .25 1.5" color="white" position="18.5 1 -.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .25 1.5" color="pink" position="13.5 1 2.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .25 1.5" color="white" position="18.5 1 2.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      
+      
+      
+      <a-box scale=".5 .5 .5" color="red" position="-17.5 1 -10" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="orange" position="-16.5 1 -10" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="yellow" position="-15.5 1 -11" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="green" position="-14.5 1 -11" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-cone height=".5" radius-bottom=".25" radius-top="0" color="blue" position="-17.5 1 -11" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cone;" input-listener></a-cone>
+      <a-cone height=".5" radius-bottom=".25" radius-top="0" color="indigo" position="-16.5 1 -11" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cone;" input-listener></a-cone>
+      <a-sphere radius=".25" color="purple" position="-15.5 1 -10" class="collidable" ammo-body="type: dynamic" ammo-shape="type: sphere;" input-listener></a-sphere>
+      <a-sphere radius=".25" color="black" position="-614.5 1 -10" class="collidable" ammo-body="type: dynamic" ammo-shape="type: sphere;" input-listener></a-sphere>
+      <a-box scale=".5 .5 .5" color="blue" position="-17.5 1 -8" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="indigo" position="-16.5 1 -8" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="purple" position="-15.5 1 -8" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="black" position="-14.5 1 -8" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-cylinder height=".5" radius=".25" color="red" position="-17.5 1 -7" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-cylinder height=".5" radius=".25" color="orange" position="-16.5 1 -7" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-cylinder height=".5" radius=".25" color="yellow" position="-15.5 1 -7" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-cylinder height=".5" radius=".25" color="green" position="-14.5 1 -7" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-box scale=".5 .25 1.5" color="pink" position="-18.5 1 -10.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .25 1.5" color="white" position="-13.5 1 -10.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .25 1.5" color="pink" position="-18.5 1 -7.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .25 1.5" color="white" position="-13.5 1 -7.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      
+      <a-box scale=".5 .5 .5" color="red" position="-9.5 1 -10" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="orange" position="-8.5 1 -10" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="yellow" position="-7.5 1 -11" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="green" position="-6.5 1 -11" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-cone height=".5" radius-bottom=".25" radius-top="0" color="blue" position="-9.5 1 -11" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cone;" input-listener></a-cone>
+      <a-cone height=".5" radius-bottom=".25" radius-top="0" color="indigo" position="-8.5 1 -11" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cone;" input-listener></a-cone>
+      <a-sphere radius=".25" color="purple" position="-7.5 1 -10" class="collidable" ammo-body="type: dynamic" ammo-shape="type: sphere;" input-listener></a-sphere>
+      <a-sphere radius=".25" color="black" position="-6.5 1 -10" class="collidable" ammo-body="type: dynamic" ammo-shape="type: sphere;" input-listener></a-sphere>
+      <a-box scale=".5 .5 .5" color="blue" position="-9.5 1 -8" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="indigo" position="-8.5 1 -8" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="purple" position="-7.5 1 -8" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="black" position="-6.5 1 -8" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-cylinder height=".5" radius=".25" color="red" position="-9.5 1 -7" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-cylinder height=".5" radius=".25" color="orange" position="-8.5 1 -7" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-cylinder height=".5" radius=".25" color="yellow" position="-7.5 1 -7" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-cylinder height=".5" radius=".25" color="green" position="-6.5 1 -7" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-box scale=".5 .25 1.5" color="pink" position="-10.5 1 -10.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .25 1.5" color="white" position="-5.5 1 -10.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .25 1.5" color="pink" position="-10.5 1 -7.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .25 1.5" color="white" position="-5.5 1 -7.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      
+      <a-box scale=".5 .5 .5" color="red" position="-1.5 1 -10" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="orange" position="-.5 1 -10" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="yellow" position=".5 1 -11" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="green" position="1.5 1 -11" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-cone height=".5" radius-bottom=".25" radius-top="0" color="blue" position="-1.5 1 -11" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cone;" input-listener></a-cone>
+      <a-cone height=".5" radius-bottom=".25" radius-top="0" color="indigo" position="-.5 1 -11" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cone;" input-listener></a-cone>
+      <a-sphere radius=".25" color="purple" position=".5 1 -10" class="collidable" ammo-body="type: dynamic" ammo-shape="type: sphere;" input-listener></a-sphere>
+      <a-sphere radius=".25" color="black" position="1.5 1 -10" class="collidable" ammo-body="type: dynamic" ammo-shape="type: sphere;" input-listener></a-sphere>
+      <a-box scale=".5 .5 .5" color="blue" position="-1.5 1 -8" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="indigo" position="-.5 1 -8" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="purple" position=".5 1 -8" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="black" position="1.5 1 -8" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-cylinder height=".5" radius=".25" color="red" position="-1.5 1 -7" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-cylinder height=".5" radius=".25" color="orange" position="-.5 1 -7" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-cylinder height=".5" radius=".25" color="yellow" position=".5 1 -7" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-cylinder height=".5" radius=".25" color="green" position="1.5 1 -7" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-box scale=".5 .25 1.5" color="pink" position="-2.5 1 -10.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .25 1.5" color="white" position="2.5 1 -10.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .25 1.5" color="pink" position="-2.5 1 -7.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .25 1.5" color="white" position="2.5 1 -7.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+
+      <a-box scale=".5 .5 .5" color="red" position="6.5 1 -10" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="orange" position="7.5 1 -10" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="yellow" position="8.5 1 -11" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="green" position="9.5 1 -11" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-cone height=".5" radius-bottom=".25" radius-top="0" color="blue" position="6.5 1 -11" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cone;" input-listener></a-cone>
+      <a-cone height=".5" radius-bottom=".25" radius-top="0" color="indigo" position="7.5 1 -11" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cone;" input-listener></a-cone>
+      <a-sphere radius=".25" color="purple" position="8.5 1 -10" class="collidable" ammo-body="type: dynamic" ammo-shape="type: sphere;" input-listener></a-sphere>
+      <a-sphere radius=".25" color="black" position="9.5 1 -10" class="collidable" ammo-body="type: dynamic" ammo-shape="type: sphere;" input-listener></a-sphere>
+      <a-box scale=".5 .5 .5" color="blue" position="6.5 1 -8" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="indigo" position="7.5 1 -8" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="purple" position="8.5 1 -8" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="black" position="9.5 1 -8" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-cylinder height=".5" radius=".25" color="red" position="6.5 1 -7" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-cylinder height=".5" radius=".25" color="orange" position="7.5 1 -7" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-cylinder height=".5" radius=".25" color="yellow" position="8.5 1 -7" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-cylinder height=".5" radius=".25" color="green" position="9.5 1 -7" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-box scale=".5 .25 1.5" color="pink" position="5.5 1 -10.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .25 1.5" color="white" position="10.5 1 -10.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .25 1.5" color="pink" position="5.5 1 -7.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .25 1.5" color="white" position="10.5 1 -7.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      
+      <a-box scale=".5 .5 .5" color="red" position="14.5 1 -10" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="orange" position="15.5 1 -10" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="yellow" position="16.5 1 -11" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="green" position="17.5 1 -11" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-cone height=".5" radius-bottom=".25" radius-top="0" color="blue" position="14.5 1 -11" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cone;" input-listener></a-cone>
+      <a-cone height=".5" radius-bottom=".25" radius-top="0" color="indigo" position="15.5 1 -11" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cone;" input-listener></a-cone>
+      <a-sphere radius=".25" color="purple" position="16.5 1 -10" class="collidable" ammo-body="type: dynamic" ammo-shape="type: sphere;" input-listener></a-sphere>
+      <a-sphere radius=".25" color="black" position="17.5 1 -10" class="collidable" ammo-body="type: dynamic" ammo-shape="type: sphere;" input-listener></a-sphere>
+      <a-box scale=".5 .5 .5" color="blue" position="14.5 1 -8" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="indigo" position="15.5 1 -8" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="purple" position="16.5 1 -8" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .5 .5" color="black" position="17.5 1 -8" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-cylinder height=".5" radius=".25" color="red" position="14.5 1 -7" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-cylinder height=".5" radius=".25" color="orange" position="15.5 1 -7" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-cylinder height=".5" radius=".25" color="yellow" position="16.5 1 -7" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-cylinder height=".5" radius=".25" color="green" position="17.5 1 -7" class="collidable" ammo-body="type: dynamic" ammo-shape="type: cylinder;" input-listener></a-cylinder>
+      <a-box scale=".5 .25 1.5" color="pink" position="13.5 1 -10.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .25 1.5" color="white" position="18.5 1 -10.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .25 1.5" color="pink" position="13.5 1 -7.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      <a-box scale=".5 .25 1.5" color="white" position="18.5 1 -7.5" class="collidable" ammo-body="type: dynamic" ammo-shape="type: box;" input-listener></a-box>
+      
+      
+      <!-- set room -->
+      <a-sky color="skyblue"></a-sky>
+      <a-plane src="#floor" repeat="8 8" width="50" height="50" rotation="-90 0 0" ammo-body="type: static" ammo-shape="type: box"></a-plane>
+      <a-plane src="#wall" repeat="10 10" width="50" height="50" rotation="90 0 0" position="0 8.5 0" ammo-body="type: static" ammo-shape="type: box"></a-plane>
+      <a-plane src="#wall" width="50" height="8.5" rotation="0 0 0" position="0 4.25 -25" ammo-body="type: static" ammo-shape="type: box"></a-plane>
+      <a-plane src="#wall" width="50" height="8.5" rotation="0 180 0" position="0 4.25 25" ammo-body="type: static" ammo-shape="type: box"></a-plane>
+      <a-plane src="#wall" width="50" height="8.5" rotation="0 90 0" position="-25 4.25 0" ammo-body="type: static" ammo-shape="type: box"></a-plane>
+      <a-plane src="#wall" width="50" height="8.5" rotation="0 -90 0" position="25 4.25 0" ammo-body="type: static" ammo-shape="type: box"></a-plane>
+    
+      
+      
+      <!-- camera -->
+      <a-entity id="cameraRig" movement-controls position="0 0 18" rotation="0 0 0">
+        <a-camera ammo-body="type: kinematic" ammo-shape="type: box; fit: manual; halfExtents: .5 2 .5"></a-camera>
+        <a-entity id="ctlL" laser-controls="hand: left" meta-quest-touch-pro raycaster="objects: .collidable; far:1.2;" input-listener></a-entity>
+        <a-entity id="ctlR" laser-controls="hand: right" raycaster="objects: .collidable; far:1.2;" input-listener></a-entity>
+      </a-entity>
+      
+    </a-scene>
+    
+  </body>
+</html>
